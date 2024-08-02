@@ -1,0 +1,34 @@
+CREATE DATABASE IF NOT EXISTS SewingDB;
+
+USE SewingDB;
+
+CREATE TABLE IF NOT EXISTS Tasks (
+    task_id INT PRIMARY KEY,
+    task_accept DATE,
+    task_deli DATE,
+    task_client VARCHAR(255),
+    task_name VARCHAR(255),
+    task_count INT,
+    task_done INT,
+    task_sum INT,
+	task_about VARCHAR(255)
+);
+
+-- Таблица работников
+CREATE TABLE IF NOT EXISTS Workers (
+    worker_id INT PRIMARY KEY AUTO_INCREMENT,
+    worker_fname VARCHAR(255),
+    worker_sname VARCHAR(255),
+    worker_about VARCHAR(255)
+);
+
+-- Таблица связи задач и работников
+CREATE TABLE IF NOT EXISTS Task_Workers (
+    task_worker_id INT PRIMARY KEY AUTO_INCREMENT,
+    task_id INT,
+    worker_id INT,
+    tw_done INT,
+    tw_date DATE,
+    FOREIGN KEY (task_id) REFERENCES Tasks(task_id),
+    FOREIGN KEY (worker_id) REFERENCES Workers(worker_id)
+);
