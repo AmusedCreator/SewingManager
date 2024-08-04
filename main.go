@@ -10,19 +10,26 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
+
+// TODO Переделать базу данных - добавить новую сущность ТОВАР
 
 func main() {
 
 	myApp := app.New()
-	myWindow := myApp.NewWindow("Table Example")
+	myWindow := myApp.NewWindow("SewingManager")
 
 	buttons := container.New(layout.NewGridLayout(1),
-		widget.NewButtonWithIcon("Добавить работника", nil, nil),
-		widget.NewButtonWithIcon("Добавить Задачу", nil, nil),
-		widget.NewButtonWithIcon("Настройки", nil, nil),
+		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), nil),
+		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), nil),
+		widget.NewButtonWithIcon("Номенкулатура", theme.DocumentCreateIcon(), nil),
+		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), nil),
+		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), nil),
 	)
+
+	myWindow.Resize(fyne.NewSize(1050, 600))
 
 	lable := widget.NewLabel("Таблица задач")
 
@@ -41,7 +48,7 @@ func tableMaker() fyne.CanvasObject {
 	}
 	defer db.Close()
 
-	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "%", "сумма"}
+	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово", "сумма"}
 
 	data, err := GetTasks(db)
 	if err != nil {
