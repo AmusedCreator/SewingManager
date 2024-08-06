@@ -3,12 +3,23 @@ package main
 import (
 	"database/sql"
 	"fmt"
+    "log"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
+func dbInit() (*sql.DB, error) {
+    dsn := "root:123456789@/SewingDB"
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+    return db, nil
+}
+
+
 func GetTasks(db *sql.DB) ([][]string, error) {
-    rows, err := db.Query("SELECT task_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_sum, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id;")
+    rows, err := db.Query("SELECT task_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_sum, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id ORDER BY task_id;")
     if err != nil {
         return nil, err
     }

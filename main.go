@@ -1,8 +1,6 @@
 package main
 
 import (
-	"database/sql"
-
 	"fmt"
 	"log"
 
@@ -13,8 +11,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
-
-// TODO Переделать базу данных - добавить новую сущность ТОВАР
 
 func main() {
 
@@ -41,12 +37,10 @@ func main() {
 }
 
 func tableMaker() fyne.CanvasObject {
-	dsn := "root:123456789@/SewingDB"
-	db, err := sql.Open("mysql", dsn)
+	db, err := dbInit()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
 	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово", "сумма"}
 
