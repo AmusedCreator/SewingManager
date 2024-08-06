@@ -29,25 +29,28 @@ func main() {
 
 	lable := widget.NewLabel("Таблица задач")
 
-	table := tableMaker()
+	table := tableMaker(0)
 
 	content := container.NewBorder(lable, nil, buttons, nil, table)
 	myWindow.SetContent(content)
 	myWindow.ShowAndRun()
 }
 
-func tableMaker() fyne.CanvasObject {
+
+var data [][]string = nil
+
+func tableMaker(tSort int) fyne.CanvasObject {
 	db, err := dbInit()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово", "сумма"}
-
-	data, err := GetTasks(db)
+	data, err = GetTasks(db, tSort)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово", "сумма"}
 
 	table := widget.NewTable(
 		func() (int, int) {
@@ -65,9 +68,20 @@ func tableMaker() fyne.CanvasObject {
 		})
 	table.OnSelected = func(id widget.TableCellID) {
 		if id.Row == 0 {
-			return
+			if id.Col >= 0 {
+				tableMaker(id.Col)
+				table.Refresh()
+				fmt.Println("Selected", id.Col)
+				table.Unselect(id)
+			}else {
+				return
+			}
 		} else {
-			fmt.Println("Selected", id)
+			if id.Col >= 0 || id.Row > 0 {
+				fmt.Println("Selected", id)
+				table.Unselect(id)
+			}
+
 		}
 	}
 
