@@ -8,19 +8,23 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+var gdb *sql.DB
+func getDB() (*sql.DB){return gdb}
+
 func dbInit() (*sql.DB, error) {
     dsn := "root:123456789@/SewingDB"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
+    gdb = db
     return db, nil
 }
 
 var queryCheck = []bool{false, false, false, false, false, false, false, false}
 
 func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
-    query := "SELECT task_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_sum, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id ORDER BY"
+    query := "SELECT task_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id ORDER BY"
     switch(tSort){
         case 0:
             if queryCheck[0]{
@@ -71,13 +75,6 @@ func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
                 query += " task_done"
             }
             queryCheck[6] = !queryCheck[6]
-        case 7:
-            if queryCheck[7]{
-                query += " task_sum DESC"
-            } else {
-                query += " task_sum"
-            }
-            queryCheck[7] = !queryCheck[7]
     }
     rows, err := db.Query(query)
     if err != nil {
@@ -87,11 +84,11 @@ func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
 
     var tasks [][]string
     for rows.Next() {
-        var taskID, taskCount, taskDone, taskSum int
+        var taskID, taskCount, taskDone int
         var taskAccept, taskDeli, taskClient string
         var taskName string
         var taskAbout string
-        err := rows.Scan(&taskID, &taskAccept, &taskDeli, &taskClient, &taskName, &taskCount, &taskDone, &taskSum, &taskAbout)
+        err := rows.Scan(&taskID, &taskAccept, &taskDeli, &taskClient, &taskName, &taskCount, &taskDone, &taskAbout)
         if err != nil {
             return nil, err
         }
@@ -103,7 +100,6 @@ func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
             taskName,
             fmt.Sprintf("%d", taskCount),
             fmt.Sprintf("%d", taskDone),
-            fmt.Sprintf("%d", taskSum),
             taskAbout,
         }
         tasks = append(tasks, task)

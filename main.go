@@ -15,31 +15,34 @@ import (
 func main() {
 
 	myApp := app.New()
-	myWindow := myApp.NewWindow("SewingManager")
+	mainWindow := myApp.NewWindow("SewingManager")
+
+	mainWindow.SetMaster()
 
 	buttons := container.New(layout.NewGridLayout(1),
-		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), nil),
+		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), func() {
+			InitWWindow(myApp)
+		}),
 		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), nil),
 		widget.NewButtonWithIcon("Номенкулатура", theme.DocumentCreateIcon(), nil),
 		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), nil),
 		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), nil),
 	)
 
-	myWindow.Resize(fyne.NewSize(1050, 600))
+	mainWindow.Resize(fyne.NewSize(1050, 600))
 
 	lable := widget.NewLabel("Таблица задач")
 
-	table := tableMaker(0)
+	table := mainTableMaker(0)
 
 	content := container.NewBorder(lable, nil, buttons, nil, table)
-	myWindow.SetContent(content)
-	myWindow.ShowAndRun()
+	mainWindow.SetContent(content)
+	mainWindow.ShowAndRun()
 }
-
 
 var data [][]string = nil
 
-func tableMaker(tSort int) fyne.CanvasObject {
+func mainTableMaker(tSort int) fyne.CanvasObject {
 	db, err := dbInit()
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +53,7 @@ func tableMaker(tSort int) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
-	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово", "сумма"}
+	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово"}
 
 	table := widget.NewTable(
 		func() (int, int) {
@@ -69,11 +72,11 @@ func tableMaker(tSort int) fyne.CanvasObject {
 	table.OnSelected = func(id widget.TableCellID) {
 		if id.Row == 0 {
 			if id.Col >= 0 {
-				tableMaker(id.Col)
+				mainTableMaker(id.Col)
 				table.Refresh()
 				fmt.Println("Selected", id.Col)
 				table.Unselect(id)
-			}else {
+			} else {
 				return
 			}
 		} else {
@@ -88,11 +91,10 @@ func tableMaker(tSort int) fyne.CanvasObject {
 	table.SetColumnWidth(0, 30)
 	table.SetColumnWidth(1, 100)
 	table.SetColumnWidth(2, 100)
-	table.SetColumnWidth(3, 100)
+	table.SetColumnWidth(3, 200)
 	table.SetColumnWidth(4, 200)
 	table.SetColumnWidth(5, 100)
 	table.SetColumnWidth(6, 100)
-	table.SetColumnWidth(7, 100)
 
 	for i := 0; i < len(data)+1; i++ {
 		table.SetRowHeight(i, 30)
