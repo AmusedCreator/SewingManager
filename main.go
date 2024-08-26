@@ -40,7 +40,7 @@ func main() {
 	mainWindow.ShowAndRun()
 }
 
-var data [][]string = nil
+var tasksdata [][]string = nil
 
 func mainTableMaker(tSort int) fyne.CanvasObject {
 	db, err := dbInit()
@@ -48,7 +48,7 @@ func mainTableMaker(tSort int) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
-	data, err = GetTasks(db, tSort)
+	tasksdata, err = GetTasks(db, tSort)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func mainTableMaker(tSort int) fyne.CanvasObject {
 
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(data) + 1, len(headers)
+			return len(tasksdata) + 1, len(headers)
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel(" ")
@@ -66,7 +66,7 @@ func mainTableMaker(tSort int) fyne.CanvasObject {
 			if i.Row == 0 {
 				o.(*widget.Label).SetText(headers[i.Col])
 			} else {
-				o.(*widget.Label).SetText(data[i.Row-1][i.Col])
+				o.(*widget.Label).SetText(tasksdata[i.Row-1][i.Col])
 			}
 		})
 	table.OnSelected = func(id widget.TableCellID) {
@@ -96,7 +96,7 @@ func mainTableMaker(tSort int) fyne.CanvasObject {
 	table.SetColumnWidth(5, 100)
 	table.SetColumnWidth(6, 100)
 
-	for i := 0; i < len(data)+1; i++ {
+	for i := 0; i < len(tasksdata)+1; i++ {
 		table.SetRowHeight(i, 30)
 	}
 
