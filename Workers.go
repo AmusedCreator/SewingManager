@@ -35,7 +35,6 @@ func InitWWindow(myApp fyne.App) {
 }
 
 func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
-	var workersdata [][]string = nil
 	db := getDB()
 	workersdata, err := GetWorkers(db)
 	if err != nil {
@@ -62,9 +61,21 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 		)
 
 		table.OnSelected = func(id widget.TableCellID) {
-			if id.Row <= 0{
+			if id.Row <= 0 {
 				return
 			}
+
+			// Сначала заново получаем актуальные данные
+			db := getDB()
+			workersdata, err := GetWorkers(db)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if id.Row-1 >= len(workersdata) {
+				return // Избегаем выхода за пределы массива
+			}
+
 			workerInfoWindow := myApp.NewWindow("Информация о работнике")
 			workerInfoWindow.Resize(fyne.NewSize(400, 300))
 
@@ -77,7 +88,6 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 			about.SetText(workersdata[id.Row-1][3])
 
 			buttons := container.New(layout.NewGridLayout(1),
-
 				widget.NewButton("Сохранить", func() {
 					db := getDB()
 					_, err := db.Exec("UPDATE workers SET worker_fname = ?, worker_sname = ?, worker_about = ? WHERE worker_id = ?", fName.Text, sName.Text, about.Text, workersdata[id.Row-1][0])
@@ -85,7 +95,7 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 						log.Fatal(err)
 					}
 					workerInfoWindow.Close()
-					updateTable(myApp, table)
+					updateWTable(myApp, table)
 				}),
 				widget.NewButton("Удалить", func() {
 					db := getDB()
@@ -94,7 +104,7 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 						log.Fatal(err)
 					}
 					workerInfoWindow.Close()
-					updateTable(myApp, table)
+					updateWTable(myApp, table)
 				}),
 				widget.NewButton("Отмена", func() {
 					workerInfoWindow.Close()
@@ -169,7 +179,7 @@ func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 				return
 			}
 			addWWindow.Close()
-			updateTable(myApp, table)
+			updateWTable(myApp, table)
 		}),
 		widget.NewButton("Отмена", func() {
 			addWWindow.Close()
@@ -185,6 +195,7 @@ func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 	return
 }
 
-func updateTable(myApp fyne.App, table *widget.Table) {
+func updateWTable(myApp fyne.App, table *widget.Table) {
 	wTableMaker(myApp, table)
+	table.Refresh() 
 }

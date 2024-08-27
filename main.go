@@ -23,10 +23,18 @@ func main() {
 		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), func() {
 			InitWWindow(myApp)
 		}),
-		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), nil),
-		widget.NewButtonWithIcon("Номенкулатура", theme.DocumentCreateIcon(), nil),
-		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), nil),
-		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), nil),
+		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), func() {
+			// InitTWindow(myApp)
+		}),
+		widget.NewButtonWithIcon("Номенкулатура", theme.DocumentCreateIcon(), func() {
+			InitNWindow(myApp)
+		}),
+		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), func() {
+			// InitSWindow(myApp)
+		}),
+		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), func() {
+			// InitHWindow(myApp)
+		}),
 	)
 
 	mainWindow.Resize(fyne.NewSize(1050, 600))
