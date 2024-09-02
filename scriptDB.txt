@@ -8,28 +8,28 @@ USE SewingDB;
 CREATE TABLE IF NOT EXISTS Nomenclature (
     nom_id INT PRIMARY KEY AUTO_INCREMENT,
     nom_name VARCHAR(255) UNIQUE,
-    nom_price DECIMAL(10, 2)  -- Добавлено поле для цены за штуку
+    nom_price DECIMAL(10, 2) NOT NULL -- Добавлено поле для цены за штуку
 );
 
 -- Создание таблицы задач с удалением суммы заказа
 CREATE TABLE IF NOT EXISTS Tasks (
-    task_id INT PRIMARY KEY AUTO_INCREMENT,
-    task_accept DATE,
-    task_deli DATE,
-    task_client VARCHAR(255),
-    task_name INT,
-    task_count INT,
-    task_done INT,
-    task_about VARCHAR(255),
+    task_id INT PRIMARY KEY UNIQUE NOT NULL,
+    task_accept VARCHAR(10) NOT NULL,
+    task_deli VARCHAR(10) NOT NULL,
+    task_client VARCHAR(255) NOT NULL,
+    task_name INT NOT NULL,
+    task_count INT NOT NULL,
+    task_done INT NOT NULL DEFAULT 0,
+    task_about VARCHAR(255) DEFAULT '',
     FOREIGN KEY (task_name) REFERENCES Nomenclature(nom_id)
 );
 
 -- Создание таблицы работников
 CREATE TABLE IF NOT EXISTS Workers (
     worker_id INT PRIMARY KEY AUTO_INCREMENT,
-    worker_fname VARCHAR(255),
-    worker_sname VARCHAR(255),
-    worker_about VARCHAR(255)
+    worker_fname VARCHAR(255) NOT NULL,
+    worker_sname VARCHAR(255) NOT NULL,
+    worker_about VARCHAR(255) NULL
 );
 
 -- Создание таблицы связи задач и работников с добавлением суммы за день
@@ -37,14 +37,14 @@ CREATE TABLE IF NOT EXISTS Task_Workers (
     task_worker_id INT PRIMARY KEY AUTO_INCREMENT,
     task_id INT,
     worker_id INT,
-    tw_done INT,
-    tw_date DATE,
+    tw_done INT NOT NULL,
+    tw_date VARCHAR(10) NOT NULL,
     tw_day_sum DECIMAL(10, 2),  -- Добавлено поле для суммы за день
     FOREIGN KEY (task_id) REFERENCES Tasks(task_id),
     FOREIGN KEY (worker_id) REFERENCES Workers(worker_id)
 );
 
-INSERT INTO Nomenclature (nom_name, nom_price) VALUES 
+INSERT INTO Nomenclature (nom_ame, nom_price) VALUES 
 ('Men\'s T-Shirt', 15.00),
 ('Women\'s T-Shirt', 18.00),
 ('Children\'s T-Shirt', 12.00),
@@ -63,12 +63,12 @@ INSERT INTO Workers (worker_fname, worker_sname, worker_about) VALUES
 ('Sergey', 'Kuznetsov', 'Handles men\'s clothing, focused on quality.'),
 ('Mikhail', 'Smirnov', 'Specializes in denim products, works with accuracy.');
 
-INSERT INTO Tasks (task_accept, task_deli, task_client, task_name, task_count, task_done, task_about) VALUES 
-('2024-08-01', '2024-08-10', 'ABC Clothing Co.', 1, 100, 50, 'Order for Men\'s T-Shirts, summer collection.'),
-('2024-08-02', '2024-08-12', 'XYZ Fashion', 2, 80, 40, 'Women\'s T-Shirts for autumn sale.'),
-('2024-08-03', '2024-08-15', 'Fashion Kids', 3, 120, 60, 'Children\'s T-Shirts for back-to-school season.'),
-('2024-08-05', '2024-08-20', 'Denim World', 4, 50, 25, 'Order for Jeans, new line.'),
-('2024-08-07', '2024-08-25', 'Winter Wear', 5, 40, 20, 'Jackets for winter collection.');
+INSERT INTO Tasks (task_id, task_accept, task_deli, task_client, task_name, task_count, task_about) VALUES 
+('1', '01-08-2024', '10-08-2024', 'ABC Clothing Co.', 1, 100, 'Order for Men\'s T-Shirts, summer collection.'),
+('2', '02-08-2024', '12-08-2024', 'XYZ Fashion', 2, 80, 'Women\'s T-Shirts for autumn sale.'),
+('3', '03-08-2024', '15-08-2024', 'Fashion Kids', 3, 120, 'Children\'s T-Shirts for back-to-school season.'),
+('4', '04-08-2024', '20-08-2024', 'Denim World', 4, 50, 'Order for Jeans, new line.'),
+('5', '05-08-2024', '25-08-2024', 'Winter Wear', 5, 40, 'Jackets for winter collection.');
 
 INSERT INTO Task_Workers (task_id, worker_id, tw_done, tw_date, tw_day_sum) VALUES 
 (1, 1, 20, '2024-08-06', 300.00),

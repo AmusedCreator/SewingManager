@@ -1,12 +1,12 @@
 package main
 
 import (
-	"image/color"
+	"errors"
 	"log"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -146,14 +146,12 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 
 func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 	addWWindow := myApp.NewWindow("Добавление работника")
-
 	addWWindow.Resize(fyne.NewSize(400, 300))
 
 	fName := widget.NewEntry()
 	sName := widget.NewEntry()
 	about := widget.NewEntry()
 
-	errorLabel := canvas.NewText("", color.RGBA{255, 0, 0, 255})
 
 	fName.SetPlaceHolder("Имя")
 	sName.SetPlaceHolder("Фамилия")
@@ -162,20 +160,13 @@ func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButton("Добавить", func() {
 			if fName.Text == "" || sName.Text == "" {
-				error := myApp.NewWindow("Ошибка!")
-				error.Resize(fyne.NewSize(200, 100))
-				error.SetContent(widget.NewLabel("Заполните все поля!"))
-				okbutton := widget.NewButton("OK", func() {
-					error.Close()
-				})
-				error.SetContent(container.NewVBox(widget.NewLabel("Заполните все поля!"), okbutton))
-				error.Show()
+				dialog.ShowError(errors.New("Заполните все поля!"), addWWindow)
 				return
 			}
 			db := getDB()
 			_, err := db.Exec("INSERT INTO workers (worker_fname, worker_sname, worker_about) VALUES (?, ?, ?)", fName.Text, sName.Text, about.Text)
 			if err != nil {
-				errorLabel.Text = "Ошибка добавления"
+				dialog.ShowError(errors.New("Ошибка добавления!"), addWWindow)
 				return
 			}
 			addWWindow.Close()
@@ -184,7 +175,6 @@ func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 		widget.NewButton("Отмена", func() {
 			addWWindow.Close()
 		}),
-		errorLabel,
 	)
 
 	content := container.NewVBox(fName, sName, about, buttons)

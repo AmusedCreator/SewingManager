@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -137,7 +138,7 @@ func GetWorkers(db *sql.DB) ([][]string, error) {
 }
 
 func GetTaskWorkers(db *sql.DB) ([][]string, error) {
-	rows, err := db.Query("SELECT task_worker_id, task_id, worker_id, tw_done, tw_date FROM Task_Workers")
+	rows, err := db.Query("SELECT task_worker_id, task_id, worker_id, tw_done, tw_date, tw_day_sum FROM Task_Workers")
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +147,8 @@ func GetTaskWorkers(db *sql.DB) ([][]string, error) {
 	var taskWorkers [][]string
 	for rows.Next() {
 		var taskWorkerID, taskID, workerID, twDone int
-		var twDate string
-		err := rows.Scan(&taskWorkerID, &taskID, &workerID, &twDone, &twDate)
+		var twDate, tw_day_sum string
+		err := rows.Scan(&taskWorkerID, &taskID, &workerID, &twDone, &twDate, &tw_day_sum)
 		if err != nil {
 			return nil, err
 		}
@@ -157,6 +158,7 @@ func GetTaskWorkers(db *sql.DB) ([][]string, error) {
 			fmt.Sprintf("%d", workerID),
 			fmt.Sprintf("%d", twDone),
 			twDate,
+			tw_day_sum,
 		}
 		taskWorkers = append(taskWorkers, taskWorker)
 	}
@@ -187,4 +189,79 @@ func GetNomenclature(db *sql.DB) ([][]string, error) {
 		nomenclature = append(nomenclature, nom)
 	}
 	return nomenclature, nil
+}
+
+func GetNomenclatureID(db *sql.DB, name string) (int, error) {
+	var id int
+	err := db.QueryRow("SELECT nom_id FROM Nomenclature WHERE nom_name = ?", name).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func SaveTask(db *sql.DB, id, acceptDate string, deliDate, client string, nomID int, quantity string) error {
+	_, err := db.Exec("INSERT INTO Tasks (task_id ,task_accept, task_deli, task_client, task_name, task_count, task_done) VALUES (?, ?, ?, ?, ?, ?, ?)",
+	id ,acceptDate, deliDate, client, nomID, quantity, 0)
+	return err
+}
+
+func GetTaskByID(db *sql.DB, id int) ([][]string, error) {
+	rows, err := db.Query("SELECT task_worker_id, task_id, worker_id, tw_done, tw_date, tw_day_sum FROM Task_Workers WHERE task_id = ?", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var taskWorkers [][]string
+	for rows.Next() {
+		var taskWorkerID, taskID, workerID, twDone int
+		var twDate, tw_day_sum string
+		err := rows.Scan(&taskWorkerID, &taskID, &workerID, &twDone, &twDate, &tw_day_sum)
+		if err != nil {
+			return nil, err
+		}
+		taskWorker := []string{
+			fmt.Sprintf("%d", taskWorkerID),
+			fmt.Sprintf("%d", taskID),
+			fmt.Sprintf("%d", workerID),
+			fmt.Sprintf("%d", twDone),
+			twDate,
+			tw_day_sum,
+		}
+		taskWorkers = append(taskWorkers, taskWorker)
+	}
+	return taskWorkers, nil
+}
+
+func GetTaskNameByID(db *sql.DB, id int) string {
+	var name string
+	err := db.QueryRow("SELECT task_name FROM Tasks WHERE task_id = ?", id).Scan(&name)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return name
+}
+
+func DeleteTask(db *sql.DB, id int) error {
+	_, err := db.Exec("DELETE FROM Tasks WHERE task_id = ?", id)
+	return err
+}
+
+// calculateDaySum вычисляет сумму за день на основе выполненного и цены за штуку
+func CalculateDaySum(db *sql.DB, taskID int, done int) float64 {
+	var pricePerUnit float64
+	err := db.QueryRow("SELECT n.nom_price FROM Tasks t JOIN Nomenclature n ON t.task_name = n.nom_id WHERE t.task_id = ?", taskID).Scan(&pricePerUnit)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return pricePerUnit * float64(done)
+}
+
+
+
+// getWorkerID извлекает ID работника из строки выбранной в списке
+func GetWorkerID(selectedWorker string) string {
+	// Разбираем строку и извлекаем ID работника (предполагается, что формат строки имеет ID в начале)
+	return selectedWorker[:strings.Index(selectedWorker, " ")]
 }
