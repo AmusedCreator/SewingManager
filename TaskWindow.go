@@ -68,6 +68,72 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 				}
 			},
 		)
+
+		table.OnSelected = func(id widget.TableCellID){
+			if id.Row <= 0{return}
+
+			tasksdata, err := GetTaskByID(getDB(), taskID)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if id.Row -1 >= len(tasksdata){return}
+
+			workersTaskInfoWindow := myApp.NewWindow("Информация о задаче работника")
+			workersTaskInfoWindow.Resize(fyne.NewSize(400, 300))
+
+			workerName := widget.NewEntry()
+			workerName.SetText(tasksdata[id.Row-1][2])
+			workerName.Disable()
+
+			workerDone := widget.NewEntry()
+			workerDone.SetText(tasksdata[id.Row-1][3])
+			wDone, err := strconv.Atoi(workerDone.Text)
+			if err != nil{
+				log.Fatal(err)
+				return
+			}
+
+			workerDate := widget.NewEntry()
+			workerDate.SetText(tasksdata[id.Row-1][4])
+
+
+			workerSum := CalculateDaySum(db, taskID, wDone)
+			fmt.Println(workerSum)
+			
+			buttons := container.New(layout.NewGridLayout(1),
+				widget.NewButton("Сохранить", func() {
+					_, err := db.Exec("UPDATE Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id SET tw_done = ?, tw_date = ?, tw_day_sum = ? WHERE task_worker_id = ?", workerDone.Text, workerDate.Text, workerSum, tasksdata[id.Row-1][0])
+					if err != nil {
+						log.Fatal(err)
+					}
+					workersTaskInfoWindow.Close()
+					UpdateDataBase(db)
+					updateTaskWorkersTable(myApp, table)
+				}), 
+				widget.NewButton("Удалить", func() {
+					_, err := db.Exec("DELETE Task_Workers FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_worker_id = ?", taskworkerdata[id.Row-1][0])
+					if err != nil{
+						log.Fatal(err)
+					}
+					workersTaskInfoWindow.Close()
+					UpdateDataBase(db)
+					updateTaskWorkersTable(myApp, table)
+					
+				}),
+				widget.NewButton("Отмена", func() {
+					workersTaskInfoWindow.Close()
+				}),
+			)
+			
+			twDaySum := widget.NewLabel("Сумма за день будет рассчитана автоматически")
+
+			content := container.NewVBox(workerName, workerDone, workerDate, twDaySum, buttons)
+			workersTaskInfoWindow.SetContent(content)
+
+			workersTaskInfoWindow.Show()
+		}
+
 		table.SetColumnWidth(0, 30)
 		table.SetColumnWidth(1, 50)
 		table.SetColumnWidth(2, 100)

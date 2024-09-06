@@ -15,6 +15,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+//TODO 1.сделать обновление главного списка 2.Доделать кнопки 3.Сделать везде адекватный контроль ввода 4. Сделать подтверждение действий с помощью пароля
+
+
 func main() {
 
 	myApp := app.New()
@@ -93,20 +96,19 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 				return
 			}
 		} else {
-			if id.Col >= 0 || id.Row > 0 {
+			fmt.Println(id.Col, id.Row)
+			if id.Col >= 0 && id.Row > 0 {
 				taskID, err := strconv.Atoi(tasksdata[id.Row-1][0])
 				if err != nil {
 					log.Fatal(err)
 				}
-				//создай окно в котором будет выбор, просмотреть информацию о задаче или удалить задачу
+
 				askWindow := myApp.NewWindow("")
 				askWindow.Resize(fyne.NewSize(100, 50))
 
 				buttons := container.New(layout.NewGridLayout(1),
 					widget.NewButtonWithIcon("Просмотреть", theme.ContentAddIcon(), func() {
 						InitTWindow(myApp, taskID)
-						defer updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
-						
 						askWindow.Close()
 					}),
 					widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() {
@@ -126,6 +128,8 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 				askWindow.Show()
 
 				table.Unselect(id)
+			} else {
+				return
 			}
 		}
 	}

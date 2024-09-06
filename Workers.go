@@ -89,7 +89,6 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 
 			buttons := container.New(layout.NewGridLayout(1),
 				widget.NewButton("Сохранить", func() {
-					db := getDB()
 					_, err := db.Exec("UPDATE workers SET worker_fname = ?, worker_sname = ?, worker_about = ? WHERE worker_id = ?", fName.Text, sName.Text, about.Text, workersdata[id.Row-1][0])
 					if err != nil {
 						log.Fatal(err)
@@ -98,7 +97,6 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 					updateWTable(myApp, table)
 				}),
 				widget.NewButton("Удалить", func() {
-					db := getDB()
 					_, err := db.Exec("DELETE FROM workers WHERE worker_id = ?", workersdata[id.Row-1][0])
 					if err != nil {
 						log.Fatal(err)
