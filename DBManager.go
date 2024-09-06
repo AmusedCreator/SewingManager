@@ -206,8 +206,9 @@ func SaveTask(db *sql.DB, id, acceptDate string, deliDate, client string, nomID 
 	return err
 }
 
-func GetTaskByID(db *sql.DB, id int) ([][]string, error) {
-	rows, err := db.Query("SELECT task_worker_id, task_id, worker_id, tw_done, tw_date, tw_day_sum FROM Task_Workers WHERE task_id = ?", id)
+func GetTaskByID(db *sql.DB, id int) ([][]string, error) {//SELECT task_worker_id, task_id, CONCAT(worker_fname, ' ', worker_sname) AS worker_name, tw_done, tw_date, tw_day_sum FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_id = ?
+
+	rows, err := db.Query("SELECT task_worker_id, task_id, CONCAT(worker_fname, ' ', worker_sname) AS worker_name, tw_done, tw_date, tw_day_sum FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_id = ?", id)
 	if err != nil {
 		return nil, err
 	}
@@ -215,16 +216,16 @@ func GetTaskByID(db *sql.DB, id int) ([][]string, error) {
 
 	var taskWorkers [][]string
 	for rows.Next() {
-		var taskWorkerID, taskID, workerID, twDone int
-		var twDate, tw_day_sum string
-		err := rows.Scan(&taskWorkerID, &taskID, &workerID, &twDone, &twDate, &tw_day_sum)
+		var taskWorkerID, taskID, twDone int
+		var twDate, tw_day_sum, workerName string
+		err := rows.Scan(&taskWorkerID, &taskID, &workerName, &twDone, &twDate, &tw_day_sum)
 		if err != nil {
 			return nil, err
 		}
 		taskWorker := []string{
 			fmt.Sprintf("%d", taskWorkerID),
 			fmt.Sprintf("%d", taskID),
-			fmt.Sprintf("%d", workerID),
+			workerName,
 			fmt.Sprintf("%d", twDone),
 			twDate,
 			tw_day_sum,
@@ -236,7 +237,8 @@ func GetTaskByID(db *sql.DB, id int) ([][]string, error) {
 
 func GetTaskNameByID(db *sql.DB, id int) string {
 	var name string
-	err := db.QueryRow("SELECT task_name FROM Tasks WHERE task_id = ?", id).Scan(&name)
+	//запрос который выдает название номенкулатуры по id задачи
+	err := db.QueryRow("SELECT nom_name FROM Nomenclature WHERE nom_id = (SELECT task_name FROM Tasks WHERE task_id = ?)", id).Scan(&name)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -244,8 +246,13 @@ func GetTaskNameByID(db *sql.DB, id int) string {
 }
 
 func DeleteTask(db *sql.DB, id int) error {
-	_, err := db.Exec("DELETE FROM Tasks WHERE task_id = ?", id)
+	//удаление всех записей из таблицы Task_Workers, где task_id = id
+	
+	_, err := db.Exec("DELETE FROM Task_Workers WHERE task_id = ?", id)
+	_, err = db.Exec("DELETE FROM Tasks WHERE task_id = ?", id)
+	
 	return err
+
 }
 
 // calculateDaySum вычисляет сумму за день на основе выполненного и цены за штуку
@@ -264,4 +271,34 @@ func CalculateDaySum(db *sql.DB, taskID int, done int) float64 {
 func GetWorkerID(selectedWorker string) string {
 	// Разбираем строку и извлекаем ID работника (предполагается, что формат строки имеет ID в начале)
 	return selectedWorker[:strings.Index(selectedWorker, " ")]
+}
+
+func AddTaskWorker(db *sql.DB, taskID int, workerID string, done int, date string, daySum float64) (int64, error) {
+	res, err := db.Exec("INSERT INTO Task_Workers (task_id, worker_id, tw_done, tw_date, tw_day_sum) VALUES (?, ?, ?, ?, ?)", taskID, workerID, done, date, daySum)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+
+//обновить выполненное в tasks основываясь на сумме выполненного в task_workers во всей базе дынн
+func UpdateDataBase(db *sql.DB) {
+	rows, err := db.Query("SELECT task_id FROM Tasks")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var taskID int
+		err := rows.Scan(&taskID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = db.Exec("UPDATE Tasks SET task_done = (SELECT SUM(tw_done) FROM Task_Workers WHERE task_id = ?) WHERE task_id = ?", taskID, taskID)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }

@@ -59,6 +59,8 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
+	UpdateDataBase(db)
+
 	tasksdata, err = GetTasks(db, tSort)
 	if err != nil {
 		log.Fatal(err)
@@ -103,10 +105,17 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 				buttons := container.New(layout.NewGridLayout(1),
 					widget.NewButtonWithIcon("Просмотреть", theme.ContentAddIcon(), func() {
 						InitTWindow(myApp, taskID)
+						defer updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+						
 						askWindow.Close()
 					}),
 					widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() {
-						DeleteTask(db, taskID)
+						err := DeleteTask(db, taskID)
+						if err != nil {
+							dialog.ShowError(err, askWindow)
+							return
+						}
+
 						updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
 						askWindow.Close()
 					}),
@@ -218,8 +227,8 @@ func AddTask(myApp fyne.App) {
 			return
 		}
 
-		formattedAcceptDate := acceptDate.Format("2006-01-02")
-		formattedDeliDate := deliDate.Format("2006-01-02")
+		formattedAcceptDate := acceptDate.Format("01-02-2006")
+		formattedDeliDate := deliDate.Format("01-02-2006")
 
 		quantity, err := strconv.Atoi(quantityEntry.Text)
 		if err != nil {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	//"time"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -17,14 +17,6 @@ import (
 var taskID int
 
 func InitTWindow(myApp fyne.App, id int){
-
-	db, err := dbInit()
-	if err != nil {
-		log.Fatal(err)
-	}
-	taskName := GetTaskNameByID(db, id)
-	delText := "Удалить задачу " + taskName
-
 	taskID = id
 	twWindow := myApp.NewWindow("Задачи работников")
 	table := tTableMaker(myApp, nil)
@@ -34,19 +26,17 @@ func InitTWindow(myApp fyne.App, id int){
 			addTaskWorker(myApp, twWindow, table)
 		}),
 		widget.NewButtonWithIcon("Назад", theme.NavigateBackIcon(), func() { twWindow.Close() }),
-		widget.NewButtonWithIcon(delText, theme.DeleteIcon(), func() {
-			DeleteTask(db, taskID)
-			twWindow.Close()
-		}),
-
 	)
 
 	twWindow.Resize(fyne.NewSize(1000, 600))
 
-	label := widget.NewLabel("Task Workers Table")
+	taskName := GetTaskNameByID(getDB(), taskID)
+
+	label := widget.NewLabel(taskName + " (id: " + strconv.Itoa(taskID) + ")")
 
 	content := container.NewBorder(label, nil, buttons, nil, table)
 	twWindow.SetContent(content)
+
 
 	twWindow.Show()
 	return
@@ -60,7 +50,7 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 		log.Fatal(err)
 	}
 
-	headers := []string{"id", "id задачи", "id работника", "кол-во", "дата", "сумма за день" }
+	headers := []string{"id", "id задачи", "Работник", "кол-во", "дата", "сумма за день" }
 
 	if table == nil {
 		table = widget.NewTable(
@@ -78,8 +68,8 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 				}
 			},
 		)
-		table.SetColumnWidth(0, 50)
-		table.SetColumnWidth(1, 100)
+		table.SetColumnWidth(0, 30)
+		table.SetColumnWidth(1, 50)
 		table.SetColumnWidth(2, 100)
 		table.SetColumnWidth(3, 100)
 		table.SetColumnWidth(4, 100)
@@ -123,7 +113,7 @@ func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
  
 	var workerNames []string
 	for _, worker := range workers {
-		workerNames = append(workerNames, worker[0])
+		workerNames = append(workerNames, worker[1] + " " + worker[2])
 	}
 	workerSelect := widget.NewSelect(workerNames, func(value string) {})
 	workerSelect.PlaceHolder = "Выберите работника"
@@ -162,32 +152,35 @@ func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
 				return
 			}
 
-			//twDate, err := time.Parse("02-01-2006", twDate.Text)
+			parsedDate, err := time.Parse("02-01-2006", twDate.Text)
 			if err != nil {
-			dialog.ShowError(fmt.Errorf("некорректная дата приема"), addTWWindow)
-			return
-		}
+				dialog.ShowError(fmt.Errorf("некорректная дата приема"), addTWWindow)
+				return
+			}
+			twDate.SetText(parsedDate.Format("02-01-2006"))
+			
 
 			// Расчет суммы
-			//done, _ := strconv.Atoi(twDone.Text)
-			//daySum := CalculateDaySum(db, taskID, done)
+			done, _ := strconv.Atoi(twDone.Text)
+			daySum := CalculateDaySum(db, taskID, done)
 
-			//_, err := db.Exec("INSERT INTO Task_Workers (task_id, worker_id, tw_done, tw_date, tw_day_sum) VALUES (?, ?, ?, ?, ?)",
-			//	taskID, GetWorkerID(workerSelect.Selected), twDone.Text, twDate.Text, daySum)
+			_, err = AddTaskWorker(db, taskID, workerSelect.Selected, done, parsedDate.Format("02-01-2006"), daySum)
+
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
 			addTWWindow.Close()
 			updateTaskWorkersTable(myApp, table)
+			UpdateDataBase(db)
 		}),
 		widget.NewButton("Отмена", func() {
 			addTWWindow.Close()
 		}),
 	)
 
-	taskIDLabel := widget.NewLabel(strconv.Itoa(taskID))
-	content := container.NewVBox(taskIDLabel, workerSelect, twDone, twDate, twDaySum, buttons)
+	taskName := widget.NewLabel(GetTaskNameByID(db, taskID) + " (id: " + strconv.Itoa(taskID) + ")")
+	content := container.NewVBox(taskName, workerSelect, twDone, twDate, twDaySum, buttons)
 	addTWWindow.SetContent(content)
 
 	addTWWindow.Show()
