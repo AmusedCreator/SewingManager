@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -28,7 +27,7 @@ func dbInit() (*sql.DB, error) {
 var queryCheck = []bool{false, false, false, false, false, false, false, false}
 
 func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
-	query := "SELECT task_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id ORDER BY"
+	query := "SELECT task_id, task_custom_id, task_accept, task_deli, task_client, nom_name, task_count, task_done, task_about FROM Tasks JOIN Nomenclature ON Tasks.task_name = Nomenclature.nom_id ORDER BY"
 	switch tSort {
 	case 0:
 		if queryCheck[0] {
@@ -39,40 +38,47 @@ func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
 		queryCheck[0] = !queryCheck[0]
 	case 1:
 		if queryCheck[1] {
+			query += " task_custom_id DESC"
+		} else {
+			query += " task_custom_id"
+		}
+		queryCheck[1] = !queryCheck[1]
+	case 2:
+		if queryCheck[1] {
 			query += " task_accept DESC"
 		} else {
 			query += " task_accept"
 		}
 		queryCheck[1] = !queryCheck[1]
-	case 2:
+	case 3:
 		if queryCheck[2] {
 			query += " task_deli DESC"
 		} else {
 			query += " task_deli"
 		}
 		queryCheck[2] = !queryCheck[2]
-	case 3:
+	case 4:
 		if queryCheck[3] {
 			query += " task_client DESC"
 		} else {
 			query += " task_client"
 		}
 		queryCheck[3] = !queryCheck[3]
-	case 4:
+	case 5:
 		if queryCheck[4] {
 			query += " nom_name DESC"
 		} else {
 			query += " nom_name"
 		}
 		queryCheck[4] = !queryCheck[4]
-	case 5:
+	case 6:
 		if queryCheck[5] {
 			query += " task_count DESC"
 		} else {
 			query += " task_count"
 		}
 		queryCheck[5] = !queryCheck[5]
-	case 6:
+	case 7:
 		if queryCheck[6] {
 			query += " task_done DESC"
 		} else {
@@ -88,22 +94,24 @@ func GetTasks(db *sql.DB, tSort int) ([][]string, error) {
 
 	var tasks [][]string
 	for rows.Next() {
-		var taskID, taskCount, taskDone int
+		var taskDone sql.NullInt64
+		var taskID, taskcustomID, taskCount int
 		var taskAccept, taskDeli, taskClient string
 		var taskName string
 		var taskAbout string
-		err := rows.Scan(&taskID, &taskAccept, &taskDeli, &taskClient, &taskName, &taskCount, &taskDone, &taskAbout)
+		err := rows.Scan(&taskID, &taskcustomID, &taskAccept, &taskDeli, &taskClient, &taskName, &taskCount, &taskDone, &taskAbout)
 		if err != nil {
 			return nil, err
 		}
 		task := []string{
 			fmt.Sprintf("%d", taskID),
+			fmt.Sprintf("%d", taskcustomID),
 			taskAccept,
 			taskDeli,
 			taskClient,
 			taskName,
 			fmt.Sprintf("%d", taskCount),
-			fmt.Sprintf("%d", taskDone),
+			fmt.Sprintf("%d", taskDone.Int64),
 			taskAbout,
 		}
 		tasks = append(tasks, task)
@@ -201,13 +209,13 @@ func GetNomenclatureID(db *sql.DB, name string) (int, error) {
 }
 
 func SaveTask(db *sql.DB, id, acceptDate string, deliDate, client string, nomID int, quantity string) error {
-	_, err := db.Exec("INSERT INTO Tasks (task_id ,task_accept, task_deli, task_client, task_name, task_count, task_done) VALUES (?, ?, ?, ?, ?, ?, ?)",
-	id ,acceptDate, deliDate, client, nomID, quantity, 0)
+	var taskDone int = 0
+	_, err := db.Exec("INSERT INTO Tasks (task_custom_id ,task_accept, task_deli, task_client, task_name, task_count, task_done) VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, 0))",
+	id ,acceptDate, deliDate, client, nomID, quantity, taskDone)
 	return err
 }
 
 func GetTaskByID(db *sql.DB, id int) ([][]string, error) {//SELECT task_worker_id, task_id, CONCAT(worker_fname, ' ', worker_sname) AS worker_name, tw_done, tw_date, tw_day_sum FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_id = ?
-
 	rows, err := db.Query("SELECT task_worker_id, task_id, CONCAT(worker_fname, ' ', worker_sname) AS worker_name, tw_done, tw_date, tw_day_sum FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_id = ?", id)
 	if err != nil {
 		return nil, err
@@ -267,13 +275,19 @@ func CalculateDaySum(db *sql.DB, taskID int, done int) float64 {
 
 
 
-// getWorkerID извлекает ID работника из строки выбранной в списке
-func GetWorkerID(selectedWorker string) string {
-	// Разбираем строку и извлекаем ID работника (предполагается, что формат строки имеет ID в начале)
-	return selectedWorker[:strings.Index(selectedWorker, " ")]
+
+func GetWorkerID(selectedWorker string) int {
+	db := getDB()
+	var id int
+	err := db.QueryRow("SELECT worker_id FROM Workers WHERE CONCAT(worker_fname, ' ', worker_sname) = ?", selectedWorker).Scan(&id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return id
 }
 
-func AddTaskWorker(db *sql.DB, taskID int, workerID string, done int, date string, daySum float64) (int64, error) {
+func AddTaskWorker(db *sql.DB, taskID int, workerID int, done int, date string, daySum float64) (int64, error) {
+	fmt.Println(taskID, workerID, done)
 	res, err := db.Exec("INSERT INTO Task_Workers (task_id, worker_id, tw_done, tw_date, tw_day_sum) VALUES (?, ?, ?, ?, ?)", taskID, workerID, done, date, daySum)
 	if err != nil {
 		return 0, err

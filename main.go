@@ -15,7 +15,15 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-//TODO 1.сделать обновление главного списка 2.Доделать кнопки 3.Сделать везде адекватный контроль ввода 4. Сделать подтверждение действий с помощью пароля
+//TODO 
+//1. Сделать обновление главного списка 
+//2. Доделать кнопки 
+//3. Сделать везде адекватный контроль ввода 
+//4. Сделать подтверждение действий с помощью пароля 
+//5. Создание резервных копий базы данных
+//6. Сводку за выбранный период
+//7. Одинаковые ID задач ++
+//8. Обновление суммы в задаче(опять исправить нужно)
 
 
 func main() {
@@ -69,7 +77,7 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
-	headers := []string{"id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово"}
+	headers := []string{"№", "id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово"}
 
 	table := widget.NewTable(
 		func() (int, int) {
@@ -106,9 +114,14 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 				askWindow := myApp.NewWindow("")
 				askWindow.Resize(fyne.NewSize(100, 50))
 
+				custom, err := strconv.Atoi(tasksdata[id.Row-1][1])
+				if err != nil {
+					log.Fatal(err)
+				}
+
 				buttons := container.New(layout.NewGridLayout(1),
 					widget.NewButtonWithIcon("Просмотреть", theme.ContentAddIcon(), func() {
-						InitTWindow(myApp, taskID)
+						InitTWindow(myApp, taskID, custom)
 						askWindow.Close()
 					}),
 					widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() {
@@ -134,7 +147,7 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 		}
 	}
 
-	table.SetColumnWidth(0, 30)
+	table.SetColumnWidth(0, 50)
 	table.SetColumnWidth(1, 100)
 	table.SetColumnWidth(2, 100)
 	table.SetColumnWidth(3, 200)

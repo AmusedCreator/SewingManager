@@ -15,9 +15,12 @@ import (
 )
 
 var taskID int
+var custom int
 
-func InitTWindow(myApp fyne.App, id int){
+func InitTWindow(myApp fyne.App, id int, cust int){
 	taskID = id
+	custom = cust
+
 	twWindow := myApp.NewWindow("Задачи работников")
 	table := tTableMaker(myApp, nil)
 
@@ -32,7 +35,7 @@ func InitTWindow(myApp fyne.App, id int){
 
 	taskName := GetTaskNameByID(getDB(), taskID)
 
-	label := widget.NewLabel(taskName + " (id: " + strconv.Itoa(taskID) + ")")
+	label := widget.NewLabel(taskName + " (id: " + strconv.Itoa(custom) + ")")
 
 	content := container.NewBorder(label, nil, buttons, nil, table)
 	twWindow.SetContent(content)
@@ -71,7 +74,6 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 
 		table.OnSelected = func(id widget.TableCellID){
 			if id.Row <= 0{return}
-
 			tasksdata, err := GetTaskByID(getDB(), taskID)
 			if err != nil {
 				log.Fatal(err)
@@ -135,8 +137,8 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 		}
 
 		table.SetColumnWidth(0, 30)
-		table.SetColumnWidth(1, 50)
-		table.SetColumnWidth(2, 100)
+		table.SetColumnWidth(1, 80)
+		table.SetColumnWidth(2, 150)
 		table.SetColumnWidth(3, 100)
 		table.SetColumnWidth(4, 100)
 		table.SetColumnWidth(5, 100)
@@ -168,7 +170,7 @@ func updateTWTable(myApp fyne.App, table *widget.Table) {
 
 func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
 	addTWWindow := myApp.NewWindow("Добавить связь задачи и работника")
-
+	fmt.Println("HUI")
 	addTWWindow.Resize(fyne.NewSize(300, 300))
 
 	db := getDB()
@@ -230,7 +232,8 @@ func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
 			done, _ := strconv.Atoi(twDone.Text)
 			daySum := CalculateDaySum(db, taskID, done)
 
-			_, err = AddTaskWorker(db, taskID, workerSelect.Selected, done, parsedDate.Format("02-01-2006"), daySum)
+			workerID := GetWorkerID(workerSelect.Selected)
+			_, err = AddTaskWorker(db, taskID, workerID, done, parsedDate.Format("02-01-2006"), daySum)
 
 			if err != nil {
 				log.Fatal(err)
@@ -245,7 +248,7 @@ func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
 		}),
 	)
 
-	taskName := widget.NewLabel(GetTaskNameByID(db, taskID) + " (id: " + strconv.Itoa(taskID) + ")")
+	taskName := widget.NewLabel(GetTaskNameByID(db, taskID) + " (id: " + strconv.Itoa(custom) + ")")
 	content := container.NewVBox(taskName, workerSelect, twDone, twDate, twDaySum, buttons)
 	addTWWindow.SetContent(content)
 
