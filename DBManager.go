@@ -315,4 +315,5 @@ func UpdateDataBase(db *sql.DB) {
 			log.Fatal(err)
 		}
 	}
+	fmt.Println("Updated db")
 }

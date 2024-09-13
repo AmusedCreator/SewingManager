@@ -16,14 +16,14 @@ import (
 )
 
 //TODO 
-//1. Сделать обновление главного списка 
+//1. Сделать обновление главного списка ++
 //2. Доделать кнопки 
 //3. Сделать везде адекватный контроль ввода 
 //4. Сделать подтверждение действий с помощью пароля 
 //5. Создание резервных копий базы данных
 //6. Сводку за выбранный период
 //7. Одинаковые ID задач ++
-//8. Обновление суммы в задаче(опять исправить нужно)
+//8. Обновление суммы в задаче(опять исправить нужно) ++
 
 
 func main() {
@@ -42,6 +42,9 @@ func main() {
 		}),
 		widget.NewButtonWithIcon("Номенкулатура", theme.DocumentCreateIcon(), func() {
 			InitNWindow(myApp)
+		}),
+		widget.NewButtonWithIcon("Сводка", theme.DocumentIcon(), func() {
+			// InitSWindow(myApp)
 		}),
 		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), func() {
 			// InitSWindow(myApp)
@@ -64,6 +67,8 @@ func main() {
 
 var tasksdata [][]string = nil
 
+var mainTable *widget.Table
+
 func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 	db, err := dbInit()
 	if err != nil {
@@ -79,7 +84,7 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 
 	headers := []string{"№", "id", "дата приема", "дата сдачи", "заказчик", "наименование", "кол-во", "готово"}
 
-	table := widget.NewTable(
+	mainTable = widget.NewTable(
 		func() (int, int) {
 			return len(tasksdata) + 1, len(headers)
 		},
@@ -94,12 +99,12 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 			}
 		})
 
-	table.OnSelected = func(id widget.TableCellID) {
+	mainTable.OnSelected = func(id widget.TableCellID) {
 		if id.Row == 0 {
 			if id.Col >= 0 {
 				mainTableMaker(id.Col, myApp)
-				table.Refresh()
-				table.Unselect(id)
+				mainTable.Refresh()
+				mainTable.Unselect(id)
 			} else {
 				return
 			}
@@ -140,26 +145,27 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 				askWindow.SetContent(content)
 				askWindow.Show()
 
-				table.Unselect(id)
+				mainTable.Unselect(id)
 			} else {
 				return
 			}
 		}
 	}
 
-	table.SetColumnWidth(0, 50)
-	table.SetColumnWidth(1, 100)
-	table.SetColumnWidth(2, 100)
-	table.SetColumnWidth(3, 200)
-	table.SetColumnWidth(4, 200)
-	table.SetColumnWidth(5, 100)
-	table.SetColumnWidth(6, 100)
+	mainTable.SetColumnWidth(0, 50)
+	mainTable.SetColumnWidth(1, 100)
+	mainTable.SetColumnWidth(2, 100)
+	mainTable.SetColumnWidth(3, 100)
+	mainTable.SetColumnWidth(4, 200)
+	mainTable.SetColumnWidth(5, 150)
+	mainTable.SetColumnWidth(6, 80)
+	mainTable.SetColumnWidth(7, 80)
 
 	for i := 0; i < len(tasksdata)+1; i++ {
-		table.SetRowHeight(i, 30)
+		mainTable.SetRowHeight(i, 30)
 	}
 
-	return table
+	return mainTable
 }
 
 func AddTask(myApp fyne.App) {
@@ -297,7 +303,7 @@ func AddTask(myApp fyne.App) {
 	taskWindow.Show()
 }
 
-func updateTable(table *widget.Table, myApp fyne.App) {
-	table = mainTableMaker(0, myApp).(*widget.Table)
-	table.Refresh()
+func updateTable(mainTable *widget.Table, myApp fyne.App) {
+	mainTable = mainTableMaker(0, myApp).(*widget.Table)
+	mainTable.Refresh()
 }

@@ -93,6 +93,7 @@ func nTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 						return
 					}
 					nomInfoWindow.Close()
+					UpdateDataBase(db)
 					updateNTable(myApp, table)
 				}),
 				widget.NewButton("Удалить", func() {
