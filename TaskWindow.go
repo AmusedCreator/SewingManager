@@ -101,34 +101,35 @@ func tTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 			
 			buttons := container.New(layout.NewGridLayout(1),
 				widget.NewButton("Сохранить", func() {
-					wDone, err := strconv.Atoi(workerDone.Text)
-					if err != nil{
-						log.Fatal(err)
-						return
-					}
-					workerSum := CalculateDaySum(db, taskID, wDone)
+					Confirm(myApp, func() {
+						wDone, err := strconv.Atoi(workerDone.Text)
+						if err != nil{
+							log.Fatal(err)
+							return
+						}
+						workerSum := CalculateDaySum(db, taskID, wDone)
 
-					_, terr := db.Exec("UPDATE Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id SET tw_done = ?, tw_date = ?, tw_day_sum = ? WHERE task_worker_id = ?", workerDone.Text, workerDate.Text, workerSum, tasksdata[id.Row-1][0])
-					if terr != nil {
-						log.Fatal(err)
-					}
-					workersTaskInfoWindow.Close()
-					UpdateDataBase(db)
-					updateTWTable(myApp, table)
-					updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
-
-
+						_, terr := db.Exec("UPDATE Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id SET tw_done = ?, tw_date = ?, tw_day_sum = ? WHERE task_worker_id = ?", workerDone.Text, workerDate.Text, workerSum, tasksdata[id.Row-1][0])
+						if terr != nil {
+							log.Fatal(err)
+						}
+						workersTaskInfoWindow.Close()
+						UpdateDataBase(db)
+						updateTWTable(myApp, table)
+						updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+					})
 				}), 
 				widget.NewButton("Удалить", func() {
-					_, err := db.Exec("DELETE Task_Workers FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_worker_id = ?", taskworkerdata[id.Row-1][0])
-					if err != nil{
-						log.Fatal(err)
-					}
-					workersTaskInfoWindow.Close()
-					UpdateDataBase(db)
-					updateTWTable(myApp, table)
-					updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
-
+					Confirm(myApp, func() {
+						_, err := db.Exec("DELETE Task_Workers FROM Task_Workers JOIN Workers ON Task_Workers.worker_id = Workers.worker_id WHERE task_worker_id = ?", taskworkerdata[id.Row-1][0])
+						if err != nil{
+							log.Fatal(err)
+						}
+						workersTaskInfoWindow.Close()
+						UpdateDataBase(db)
+						updateTWTable(myApp, table)
+						updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+					})
 				}),
 				widget.NewButton("Отмена", func() {
 					workersTaskInfoWindow.Close()
@@ -214,39 +215,41 @@ func addTaskWorker(myApp fyne.App, w fyne.Window, table *widget.Table) {
 
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButton("Добавить", func() {
-			if  workerSelect.Selected == "" || twDone.Text == "" || twDate.Text == "" {
-				error := myApp.NewWindow("Ошибка!")
-				error.Resize(fyne.NewSize(200, 100))
-				error.SetContent(widget.NewLabel("Заполните все поля!"))
-				okbutton := widget.NewButton("OK", func() {
-					error.Close()
-				})
-				error.SetContent(container.NewVBox(widget.NewLabel("Заполните все поля!"), okbutton))
-				error.Show()
-				return
-			}
+			Confirm(myApp, func() {
+				{if  workerSelect.Selected == "" || twDone.Text == "" || twDate.Text == "" {
+					error := myApp.NewWindow("Ошибка!")
+					error.Resize(fyne.NewSize(200, 100))
+					error.SetContent(widget.NewLabel("Заполните все поля!"))
+					okbutton := widget.NewButton("OK", func() {
+						error.Close()
+					})
+					error.SetContent(container.NewVBox(widget.NewLabel("Заполните все поля!"), okbutton))
+					error.Show()
+					return
+				}
 
-			parsedDate, err := time.Parse("02-01-2006", twDate.Text)
-			if err != nil {
-				dialog.ShowError(fmt.Errorf("некорректная дата приема"), addTWWindow)
-				return
-			}
-			twDate.SetText(parsedDate.Format("02-01-2006"))
-			
-			done, _ := strconv.Atoi(twDone.Text)
-			daySum := CalculateDaySum(db, taskID, done)
+				parsedDate, err := time.Parse("02-01-2006", twDate.Text)
+				if err != nil {
+					dialog.ShowError(fmt.Errorf("некорректная дата приема"), addTWWindow)
+					return
+				}
+				twDate.SetText(parsedDate.Format("02-01-2006"))
+				
+				done, _ := strconv.Atoi(twDone.Text)
+				daySum := CalculateDaySum(db, taskID, done)
 
-			workerID := GetWorkerID(workerSelect.Selected)
-			_, err = AddTaskWorker(db, taskID, workerID, done, parsedDate.Format("02-01-2006"), daySum)
+				workerID := GetWorkerID(workerSelect.Selected)
+				_, err = AddTaskWorker(db, taskID, workerID, done, parsedDate.Format("02-01-2006"), daySum)
 
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-			addTWWindow.Close()
-			updateTWTable(myApp, table)
-			UpdateDataBase(db)
-			updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+				addTWWindow.Close()
+				updateTWTable(myApp, table)
+				UpdateDataBase(db)
+				updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)}
+			})
 		}),
 		widget.NewButton("Отмена", func() {
 			addTWWindow.Close()

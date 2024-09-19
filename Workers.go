@@ -89,20 +89,24 @@ func wTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 
 			buttons := container.New(layout.NewGridLayout(1),
 				widget.NewButton("Сохранить", func() {
-					_, err := db.Exec("UPDATE workers SET worker_fname = ?, worker_sname = ?, worker_about = ? WHERE worker_id = ?", fName.Text, sName.Text, about.Text, workersdata[id.Row-1][0])
-					if err != nil {
-						log.Fatal(err)
-					}
-					workerInfoWindow.Close()
-					updateWTable(myApp, table)
+					Confirm(myApp, func() {
+						_, err := db.Exec("UPDATE workers SET worker_fname = ?, worker_sname = ?, worker_about = ? WHERE worker_id = ?", fName.Text, sName.Text, about.Text, workersdata[id.Row-1][0])
+						if err != nil {
+							log.Fatal(err)
+						}
+						workerInfoWindow.Close()
+						updateWTable(myApp, table)
+					})
 				}),
 				widget.NewButton("Удалить", func() {
-					_, err := db.Exec("DELETE FROM workers WHERE worker_id = ?", workersdata[id.Row-1][0])
-					if err != nil {
-						log.Fatal(err)
-					}
-					workerInfoWindow.Close()
-					updateWTable(myApp, table)
+					Confirm(myApp, func() {
+						_, err := db.Exec("DELETE FROM workers WHERE worker_id = ?", workersdata[id.Row-1][0])
+						if err != nil {
+							log.Fatal(err)
+						}
+						workerInfoWindow.Close()
+						updateWTable(myApp, table)
+					})
 				}),
 				widget.NewButton("Отмена", func() {
 					workerInfoWindow.Close()
@@ -157,18 +161,20 @@ func addWorker(myApp fyne.App, wWindow fyne.Window, table *widget.Table) {
 
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButton("Добавить", func() {
-			if fName.Text == "" || sName.Text == "" {
-				dialog.ShowError(errors.New("Заполните все поля!"), addWWindow)
-				return
-			}
-			db := getDB()
-			_, err := db.Exec("INSERT INTO workers (worker_fname, worker_sname, worker_about) VALUES (?, ?, ?)", fName.Text, sName.Text, about.Text)
-			if err != nil {
-				dialog.ShowError(errors.New("Ошибка добавления!"), addWWindow)
-				return
-			}
-			addWWindow.Close()
-			updateWTable(myApp, table)
+			Confirm(myApp, func() {
+				if fName.Text == "" || sName.Text == "" {
+					dialog.ShowError(errors.New("Заполните все поля!"), addWWindow)
+					return
+				}
+				db := getDB()
+				_, err := db.Exec("INSERT INTO workers (worker_fname, worker_sname, worker_about) VALUES (?, ?, ?)", fName.Text, sName.Text, about.Text)
+				if err != nil {
+					dialog.ShowError(errors.New("Ошибка добавления!"), addWWindow)
+					return
+				}
+				addWWindow.Close()
+				updateWTable(myApp, table)
+			})
 		}),
 		widget.NewButton("Отмена", func() {
 			addWWindow.Close()

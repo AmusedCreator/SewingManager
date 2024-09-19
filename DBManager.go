@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -14,8 +18,153 @@ func getDB() *sql.DB {
 	return gdb
 }
 
+func readConfig() (string, string, string, error){
+	file, err := os.Open("dbConfig.txt")
+	if err != nil {
+		return "", "", "", err
+	}
+	defer file.Close()
+
+	var user, password, database string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "= ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key, value := parts[0], parts[1]
+
+		switch key {
+		case "user":
+			user = value
+		case "password":
+			password = value
+		case "database":
+			database = value
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", "", "", err
+	}
+
+	return user, password, database, nil
+}
+
+func BackupDB(user, password, dbName, backupDir, host string) error{
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, password, host, dbName)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return fmt.Errorf("не удалось подключиться к базе данных: %w", err)
+	}
+	defer db.Close()
+	
+	
+	// Формируем имя файла для бэкапа с указанием текущей даты
+	timestamp := time.Now().Format("20060102_150405")
+	backupFile := fmt.Sprintf("%s/%s_backup_%s.sql", backupDir, dbName, timestamp)
+
+	// Создаем файл для сохранения бэкапа
+	outfile, err := os.Create(backupFile)
+	if err != nil {
+		return fmt.Errorf("не удалось создать файл бэкапа: %w", err)
+	}
+	defer outfile.Close()
+
+	// Пишем информацию о бэкапе
+	outfile.WriteString(fmt.Sprintf("-- Бэкап базы данных %s\n-- Время: %s\n\n", dbName, timestamp))
+
+	// Таблицы для бэкапа
+	tables := []string{"Nomenclature", "Tasks", "Workers", "Task_Workers"}
+
+	// Бэкап каждой таблицы
+	for _, table := range tables {
+		err := backupTable(db, outfile, table)
+		if err != nil {
+			return fmt.Errorf("ошибка при создании бэкапа таблицы %s: %w", table, err)
+		}
+	}
+
+	fmt.Printf("Бэкап базы данных %s успешно создан в файле: %s\n", dbName, backupFile)
+	return nil
+}
+
+func backupTable(db *sql.DB, outfile *os.File, table string) error {
+	// Получаем схему таблицы
+	rows, err := db.Query(fmt.Sprintf("SHOW CREATE TABLE %s", table))
+	if err != nil {
+		return fmt.Errorf("не удалось получить схему таблицы %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	var tableName, createTableSQL string
+	if rows.Next() {
+		if err := rows.Scan(&tableName, &createTableSQL); err != nil {
+			return fmt.Errorf("ошибка при получении схемы таблицы %s: %w", table, err)
+		}
+	}
+
+	// Записываем схему таблицы в файл
+	outfile.WriteString(fmt.Sprintf("-- Схема таблицы %s\n", table))
+	outfile.WriteString(createTableSQL + ";\n\n")
+
+	// Получаем данные из таблицы
+	dataRows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", table))
+	if err != nil {
+		return fmt.Errorf("не удалось получить данные из таблицы %s: %w", table, err)
+	}
+	defer dataRows.Close()
+
+	// Получаем столбцы таблицы
+	columns, err := dataRows.Columns()
+	if err != nil {
+		return fmt.Errorf("ошибка при получении столбцов для таблицы %s: %w", table, err)
+	}
+
+	// Подготовка для сканирования данных
+	values := make([]sql.RawBytes, len(columns))
+	scanArgs := make([]interface{}, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	// Пишем данные таблицы в файл
+	outfile.WriteString(fmt.Sprintf("-- Данные таблицы %s\n", table))
+	for dataRows.Next() {
+		err = dataRows.Scan(scanArgs...)
+		if err != nil {
+			return fmt.Errorf("ошибка при чтении данных из таблицы %s: %w", table, err)
+		}
+
+		// Генерируем строку для вставки данных
+		insertSQL := fmt.Sprintf("INSERT INTO %s VALUES (", table)
+		for i, col := range values {
+			if col == nil {
+				insertSQL += "NULL"
+			} else {
+				insertSQL += fmt.Sprintf("'%s'", string(col))
+			}
+			if i < len(values)-1 {
+				insertSQL += ", "
+			}
+		}
+		insertSQL += ");\n"
+
+		// Записываем в файл
+		outfile.WriteString(insertSQL)
+	}
+	outfile.WriteString("\n")
+
+	return nil
+}
+
 func dbInit() (*sql.DB, error) {
-	dsn := "root:123456789@/SewingDB"
+	user, password, database, err := readConfig()
+
+	dsn := fmt.Sprintf("%s:%s@/%s", user, password, database)
+	
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)

@@ -19,14 +19,25 @@ import (
 //1. Сделать обновление главного списка ++
 //2. Доделать кнопки 
 //3. Сделать везде адекватный контроль ввода 
-//4. Сделать подтверждение действий с помощью пароля 
-//5. Создание резервных копий базы данных
+//4. Сделать подтверждение действий с помощью пароля ++
+//5. Создание резервных копий базы данных ++
 //6. Сводку за выбранный период
 //7. Одинаковые ID задач ++
 //8. Обновление суммы в задаче(опять исправить нужно) ++
+//9. Конфиг ++
 
 
 func main() {
+
+	user, pass, dbname, err := readConfig()
+	if err !=nil {
+		fmt.Println(err)
+	}
+
+	err = BackupDB( user, pass, dbname, "./dbBackup", "localhost")
+	if err != nil{
+		fmt.Println("Error:", err)
+	}
 
 	myApp := app.New()
 	mainWindow := myApp.NewWindow("SewingManager")
@@ -35,7 +46,7 @@ func main() {
 
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), func() {
-			InitWWindow(myApp)
+			InitWWindow(myApp) // открываем новое окно, если подтверждено
 		}),
 		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), func() {
 			AddTask(myApp)
@@ -50,7 +61,7 @@ func main() {
 			// InitSWindow(myApp)
 		}),
 		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), func() {
-			// InitHWindow(myApp)
+			dialog.ShowInformation("Помощь", "Для получения помощи обратитесь к разработчику в телеграмме @AmusedCreator", mainWindow)
 		}),
 	)
 
@@ -64,6 +75,8 @@ func main() {
 	mainWindow.SetContent(content)
 	mainWindow.ShowAndRun()
 }
+
+
 
 var tasksdata [][]string = nil
 
@@ -130,14 +143,16 @@ func mainTableMaker(tSort int, myApp fyne.App) fyne.CanvasObject {
 						askWindow.Close()
 					}),
 					widget.NewButtonWithIcon("Удалить", theme.DeleteIcon(), func() {
-						err := DeleteTask(db, taskID)
-						if err != nil {
-							dialog.ShowError(err, askWindow)
-							return
-						}
+						Confirm(myApp, func() {
+							err := DeleteTask(db, taskID)
+							if err != nil {
+								dialog.ShowError(err, askWindow)
+								return
+							}
 
-						updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
-						askWindow.Close()
+							updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+							askWindow.Close()
+						})
 					}),
 				)
 
@@ -233,54 +248,56 @@ func AddTask(myApp fyne.App) {
 	quantityEntry.SetPlaceHolder("Количество")
 
 	saveButton := widget.NewButton("Сохранить", func() {
-		acceptDate, err := time.Parse("02-01-2006", acceptEntry.Text)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("некорректная дата приема: %s", acceptEntry.Text), taskWindow)
-			return
-		}
+		Confirm(myApp, func() {
+			acceptDate, err := time.Parse("02-01-2006", acceptEntry.Text)
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("некорректная дата приема: %s", acceptEntry.Text), taskWindow)
+				return
+			}
 
-		deliDate, err := time.Parse("02-01-2006", deliEntry.Text)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("некорректная дата сдачи: %s", deliEntry.Text), taskWindow)
-			return
-		}
+			deliDate, err := time.Parse("02-01-2006", deliEntry.Text)
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("некорректная дата сдачи: %s", deliEntry.Text), taskWindow)
+				return
+			}
 
-		if acceptDate.After(deliDate) {
-			dialog.ShowError(fmt.Errorf("дата приема не может быть позже даты сдачи"), taskWindow)
-			return
-		}
+			if acceptDate.After(deliDate) {
+				dialog.ShowError(fmt.Errorf("дата приема не может быть позже даты сдачи"), taskWindow)
+				return
+			}
 
-		formattedAcceptDate := acceptDate.Format("01-02-2006")
-		formattedDeliDate := deliDate.Format("01-02-2006")
+			formattedAcceptDate := acceptDate.Format("01-02-2006")
+			formattedDeliDate := deliDate.Format("01-02-2006")
 
-		quantity, err := strconv.Atoi(quantityEntry.Text)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("ошибка перевода"), taskWindow)
-			return
-		}
+			quantity, err := strconv.Atoi(quantityEntry.Text)
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("ошибка перевода"), taskWindow)
+				return
+			}
 
-		if quantity <= 0 {
-			dialog.ShowError(fmt.Errorf("некорректное количество: %s", quantityEntry.Text), taskWindow)
-			return
-		}
+			if quantity <= 0 {
+				dialog.ShowError(fmt.Errorf("некорректное количество: %s", quantityEntry.Text), taskWindow)
+				return
+			}
 
-		nomID := nomenclatureMap[nomenclatureSelect.Selected]
+			nomID := nomenclatureMap[nomenclatureSelect.Selected]
 
-		nomIDInt, err := strconv.Atoi(nomID)
-		if err != nil {
-			dialog.ShowError(err, taskWindow)
-			return
-		}
+			nomIDInt, err := strconv.Atoi(nomID)
+			if err != nil {
+				dialog.ShowError(err, taskWindow)
+				return
+			}
 
-		err = SaveTask(db, idEntry.Text, formattedAcceptDate, formattedDeliDate, clientEntry.Text, nomIDInt, quantityEntry.Text)
-		if err != nil {
-			dialog.ShowError(err, taskWindow)
-			return
-		}
+			err = SaveTask(db, idEntry.Text, formattedAcceptDate, formattedDeliDate, clientEntry.Text, nomIDInt, quantityEntry.Text)
+			if err != nil {
+				dialog.ShowError(err, taskWindow)
+				return
+			}
 
-		dialog.ShowInformation("Успех", "Задача добавлена", taskWindow)
-		taskWindow.Close()
-		updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+			dialog.ShowInformation("Успех", "Задача добавлена", taskWindow)
+			taskWindow.Close()
+			updateTable(mainTableMaker(0, myApp).(*widget.Table), myApp)
+		})
 	})
 
 	form := container.NewVBox(

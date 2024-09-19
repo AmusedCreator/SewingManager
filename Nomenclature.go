@@ -64,7 +64,6 @@ func nTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 				return
 			}
 	
-			// Сначала заново получаем актуальные данные
 			db := getDB()
 			nomenclaturedata, err := GetNomenclature(db)
 			if err != nil {
@@ -72,7 +71,7 @@ func nTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 			}
 	
 			if id.Row-1 >= len(nomenclaturedata) {
-				return // Избегаем выхода за пределы массива
+				return 
 			}
 	
 			nomInfoWindow := myApp.NewWindow("Информация о номенклатуре")
@@ -86,25 +85,29 @@ func nTableMaker(myApp fyne.App, table *widget.Table) *widget.Table {
 	
 			buttons := container.New(layout.NewGridLayout(1),
 				widget.NewButton("Сохранить", func() {
-					db := getDB()
-					_, err := db.Exec("UPDATE Nomenclature SET nom_name = ?, nom_price = ? WHERE nom_id = ?", nName.Text, nPrice.Text, nomenclaturedata[id.Row-1][0])
-					if err != nil {
-						log.Fatal(err)
-						return
-					}
-					nomInfoWindow.Close()
-					UpdateDataBase(db)
-					updateNTable(myApp, table)
+					Confirm(myApp, func() {
+						db := getDB()
+						_, err := db.Exec("UPDATE Nomenclature SET nom_name = ?, nom_price = ? WHERE nom_id = ?", nName.Text, nPrice.Text, nomenclaturedata[id.Row-1][0])
+						if err != nil {
+							log.Fatal(err)
+							return
+						}
+						nomInfoWindow.Close()
+						UpdateDataBase(db)
+						updateNTable(myApp, table)
+					})
 				}),
 				widget.NewButton("Удалить", func() {
-					db := getDB()
-					_, err := db.Exec("DELETE FROM Nomenclature WHERE nom_id = ?", nomenclaturedata[id.Row-1][0])
-					if err != nil {
-						log.Fatal(err)
-						return
-					}
-					nomInfoWindow.Close()
-					updateNTable(myApp, table)
+					Confirm(myApp, func() {
+						db := getDB()
+						_, err := db.Exec("DELETE FROM Nomenclature WHERE nom_id = ?", nomenclaturedata[id.Row-1][0])
+						if err != nil {
+							log.Fatal(err)
+							return
+						}
+						nomInfoWindow.Close()
+						updateNTable(myApp, table)
+					})
 				}),
 				widget.NewButton("Отмена", func() {
 					nomInfoWindow.Close()
@@ -156,25 +159,27 @@ func addNomenclature(myApp fyne.App, w fyne.Window, table *widget.Table) {
 
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButton("Добавить", func() {
-			if nName.Text == "" || nPrice.Text == "" {
-				error := myApp.NewWindow("Ошибка!")
-				error.Resize(fyne.NewSize(200, 100))
-				error.SetContent(widget.NewLabel("Заполните все поля!"))
-				okbutton := widget.NewButton("OK", func() {
-					error.Close()
-				})
-				error.SetContent(container.NewVBox(widget.NewLabel("Заполните все поля!"), okbutton))
-				error.Show()
-				return
-			}
-			db := getDB()
-			_, err := db.Exec("INSERT INTO Nomenclature (nom_name, nom_price) VALUES (?, ?)", nName.Text, nPrice.Text)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-			addNWindow.Close()
-			updateNTable(myApp, table)
+			Confirm(myApp, func() {
+				if nName.Text == "" || nPrice.Text == "" {
+					error := myApp.NewWindow("Ошибка!")
+					error.Resize(fyne.NewSize(200, 100))
+					error.SetContent(widget.NewLabel("Заполните все поля!"))
+					okbutton := widget.NewButton("OK", func() {
+						error.Close()
+					})
+					error.SetContent(container.NewVBox(widget.NewLabel("Заполните все поля!"), okbutton))
+					error.Show()
+					return
+				}
+				db := getDB()
+				_, err := db.Exec("INSERT INTO Nomenclature (nom_name, nom_price) VALUES (?, ?)", nName.Text, nPrice.Text)
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+				addNWindow.Close()
+				updateNTable(myApp, table)
+			})
 		}),
 		widget.NewButton("Отмена", func() {
 			addNWindow.Close()
