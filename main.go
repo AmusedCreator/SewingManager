@@ -17,7 +17,7 @@ import (
 
 //TODO 
 //1. Сделать обновление главного списка ++
-//2. Доделать кнопки 
+//2. Доделать кнопки ++
 //3. Сделать везде адекватный контроль ввода 
 //4. Сделать подтверждение действий с помощью пароля ++
 //5. Создание резервных копий базы данных ++
@@ -42,6 +42,9 @@ func main() {
 	myApp := app.New()
 	mainWindow := myApp.NewWindow("SewingManager")
 
+	ic, _ := fyne.LoadResourceFromPath("./source/icon.png")
+	myApp.SetIcon(ic)
+
 	mainWindow.SetMaster()
 
 	buttons := container.New(layout.NewGridLayout(1),
@@ -58,7 +61,7 @@ func main() {
 			summaryPrep(myApp)
 		}),
 		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), func() {
-			// InitSWindow(myApp)
+			InitSettings(myApp)
 		}),
 		widget.NewButtonWithIcon("Помощь", theme.QuestionIcon(), func() {
 			dialog.ShowInformation("Помощь", "Для получения помощи обратитесь к разработчику в телеграмме @AmusedCreator", mainWindow)
@@ -387,6 +390,7 @@ func summaryPrep(myApp fyne.App){
 	summaryPrepWindow.SetContent(form)
 	summaryPrepWindow.Show()
 }
+
 
 func updateTable(mainTable *widget.Table, myApp fyne.App) {
 	mainTable = mainTableMaker(0, myApp).(*widget.Table)

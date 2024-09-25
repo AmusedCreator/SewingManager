@@ -38,3 +38,5 @@ func Confirm(myApp fyne.App, onConfirm func()) {
 	confWindow.Show() // используем Show, чтобы не блокировать главный поток
 }
 
+
+

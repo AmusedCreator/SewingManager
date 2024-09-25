@@ -92,24 +92,6 @@ func BackupDB(user, password, dbName, backupDir, host string) error{
 }
 
 func backupTable(db *sql.DB, outfile *os.File, table string) error {
-	// Получаем схему таблицы
-	rows, err := db.Query(fmt.Sprintf("SHOW CREATE TABLE %s", table))
-	if err != nil {
-		return fmt.Errorf("не удалось получить схему таблицы %s: %w", table, err)
-	}
-	defer rows.Close()
-
-	var tableName, createTableSQL string
-	if rows.Next() {
-		if err := rows.Scan(&tableName, &createTableSQL); err != nil {
-			return fmt.Errorf("ошибка при получении схемы таблицы %s: %w", table, err)
-		}
-	}
-
-	// Записываем схему таблицы в файл
-	outfile.WriteString(fmt.Sprintf("-- Схема таблицы %s\n", table))
-	outfile.WriteString(createTableSQL + ";\n\n")
-
 	// Получаем данные из таблицы
 	dataRows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", table))
 	if err != nil {
@@ -550,4 +532,24 @@ func GetSummarySum(db *sql.DB, name string, startDate string, endDate string) st
 		return ""
 	}
 	return sum
+}
+
+func ClearDataBase(db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM Task_Workers")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DELETE FROM Tasks")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DELETE FROM Workers")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DELETE FROM Nomenclature")
+	if err != nil {
+		return err
+	}
+	return nil
 }
