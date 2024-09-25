@@ -21,7 +21,7 @@ import (
 //3. Сделать везде адекватный контроль ввода 
 //4. Сделать подтверждение действий с помощью пароля ++
 //5. Создание резервных копий базы данных ++
-//6. Сводку за выбранный период
+//6. Сводку за выбранный период ++
 //7. Одинаковые ID задач ++
 //8. Обновление суммы в задаче(опять исправить нужно) ++
 //9. Конфиг ++
@@ -46,7 +46,7 @@ func main() {
 
 	buttons := container.New(layout.NewGridLayout(1),
 		widget.NewButtonWithIcon("Работники", theme.AccountIcon(), func() {
-			InitWWindow(myApp) // открываем новое окно, если подтверждено
+			InitWWindow(myApp)
 		}),
 		widget.NewButtonWithIcon("Добавить Задачу", theme.ContentAddIcon(), func() {
 			AddTask(myApp)
@@ -55,7 +55,7 @@ func main() {
 			InitNWindow(myApp)
 		}),
 		widget.NewButtonWithIcon("Сводка", theme.DocumentIcon(), func() {
-			// InitSWindow(myApp)
+			summaryPrep(myApp)
 		}),
 		widget.NewButtonWithIcon("Настройки", theme.SettingsIcon(), func() {
 			// InitSWindow(myApp)
@@ -318,6 +318,74 @@ func AddTask(myApp fyne.App) {
 
 	taskWindow.SetContent(form)
 	taskWindow.Show()
+}
+
+func summaryPrep(myApp fyne.App){
+	summaryPrepWindow := myApp.NewWindow("Выберите период")
+	summaryPrepWindow.Resize(fyne.NewSize(400, 400))
+
+	db := getDB()
+	workers, err := GetWorkers(db)
+	if err != nil {
+		 log.Fatal(err)
+	}
+
+	var workerNames []string
+	for _, worker := range workers {
+		workerNames = append(workerNames, worker[1] + " " + worker[2])
+	}
+	workerSelect := widget.NewSelect(workerNames, func(value string) {})
+	workerSelect.PlaceHolder = "Выберите работника"
+
+	startDate := widget.NewEntry()
+	startDate.SetPlaceHolder("дд-мм-гггг")
+	startDate.OnChanged = func(text string) {
+		if len(text) > 10 {
+			startDate.SetText(text[:10])
+			startDate.CursorRow = 10
+		}
+
+		if len(text) == 2 || len(text) == 5 {
+			startDate.SetText(text + "-")
+			startDate.CursorRow = len(text) + 1
+		}
+	}
+
+	endDate := widget.NewEntry()
+	endDate.SetPlaceHolder("дд-мм-гггг")
+	endDate.OnChanged = func(text string) {
+		if len(text) > 10 {
+			endDate.SetText(text[:10])
+			endDate.CursorRow = 10
+		}
+
+		if len(text) == 2 || len(text) == 5 {
+			endDate.SetText(text + "-")
+			endDate.CursorRow = len(text) + 1
+		}
+	}
+
+	buttons := container.New(layout.NewGridLayout(1),
+		widget.NewButton("Показать", func() {
+			InitSWindow(myApp, workerSelect.Selected, startDate.Text, endDate.Text)
+			summaryPrepWindow.Close()
+		}),
+	)
+
+
+	form := container.NewVBox(
+		widget.NewLabel("Работник:"),
+		workerSelect,
+		widget.NewLabel("Дата начала:"),
+		startDate,
+		widget.NewLabel("Дата окончания:"),
+		endDate,
+		buttons,
+	)
+
+
+	summaryPrepWindow.SetContent(form)
+	summaryPrepWindow.Show()
 }
 
 func updateTable(mainTable *widget.Table, myApp fyne.App) {

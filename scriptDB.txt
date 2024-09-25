@@ -64,18 +64,32 @@ INSERT INTO Workers (worker_fname, worker_sname, worker_about) VALUES
 ('Sara', 'Miller', 'Apprentice, learning all types of sewing');
 
 INSERT INTO Tasks (task_custom_id, task_accept, task_deli, task_client, task_name, task_count, task_done, task_about) VALUES
-(1001, '2024-09-01', '2024-09-10', 'Client A', 1, 10, 0, '10 shirts for Client A'),
-(1002, '2024-09-02', '2024-09-15', 'Client B', 3, 5, 1, '5 dresses for Client B'),
-(1003, '2024-09-03', '2024-09-20', 'Client C', 2, 7, 0, '7 pants for Client C'),
-(1004, '2024-09-04', '2024-09-25', 'Client D', 4, 3, 1, '3 jackets for Client D'),
-(1005, '2024-09-05', '2024-09-30', 'Client E', 5, 8, 0, '8 skirts for Client E');
+(1001, '01-09-2024', '10-09-2024', 'Client A', 1, 10, 0, '10 shirts for Client A'),
+(1002, '02-09-2024', '15-09-2024', 'Client B', 3, 5, 1, '5 dresses for Client B'),
+(1003, '03-09-2024', '20-09-2024', 'Client C', 2, 7, 0, '7 pants for Client C'),
+(1004, '04-09-2024', '25-09-2024', 'Client D', 4, 3, 1, '3 jackets for Client D'),
+(1005, '05-09-2024', '30-09-2024', 'Client E', 5, 8, 0, '8 skirts for Client E');
 
 INSERT INTO Task_Workers (task_id, worker_id, tw_done, tw_date, tw_day_sum) VALUES
-(1, 1, 5, '2024-09-01', 77.50),  -- 5 из 10 рубашек
-(1, 1, 5, '2024-09-02', 77.50),  -- оставшиеся 5 рубашек
-(2, 2, 3, '2024-09-03', 122.25), -- 3 из 5 платьев
-(2, 2, 2, '2024-09-04', 81.50),  -- оставшиеся 2 платья
-(3, 3, 4, '2024-09-05', 100.00), -- 4 из 7 брюк
-(3, 3, 3, '2024-09-06', 75.00),  -- оставшиеся 3 брюки
-(4, 4, 3, '2024-09-07', 180.00), -- все 3 куртки
-(5, 5, 8, '2024-09-08', 162.40); -- все 8 юбок
+(1, 1, 5, '01-09-2024', 77.50),  -- 5 из 10 рубашек
+(1, 1, 5, '02-09-2024', 77.50),  -- оставшиеся 5 рубашек
+(2, 2, 3, '03-09-2024', 122.25), -- 3 из 5 платьев
+(2, 2, 2, '04-09-2024', 81.50),  -- оставшиеся 2 платья
+(3, 3, 4, '05-09-2024', 100.00), -- 4 из 7 брюк
+(3, 3, 3, '06-09-2024', 75.00),  -- оставшиеся 3 брюки
+(4, 4, 3, '07-09-2024', 180.00), -- все 3 куртки
+(5, 5, 8, '08-09-2024', 162.40); -- все 8 юбок
+
+SELECT 
+			tw.task_worker_id,
+			t.task_name,
+			CONCAT(w.worker_fname, ' ', w.worker_sname) AS worker_name,
+			tw.tw_done AS task_count,
+			tw.tw_day_sum AS total_sum,
+			tw.tw_date AS task_date
+		FROM 
+			Workers w
+			JOIN Task_Workers tw ON w.worker_id = tw.worker_id
+			JOIN Tasks t ON t.task_id = tw.task_id
+	WHERE 
+		w.worker_fname = "Emily" AND w.worker_sname = "Brown" AND tw.tw_date BETWEEN "01-09-2024" AND "30-09-2024";

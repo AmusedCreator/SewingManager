@@ -466,3 +466,88 @@ func UpdateDataBase(db *sql.DB) {
 	}
 	fmt.Println("Updated db")
 }
+
+func GetSummary(db *sql.DB, name string, startDate string, endDate string) ([][]string, error) {
+	// Разделяем имя на fname и sname
+	names := strings.SplitN(name, " ", 2)
+	if len(names) != 2 {
+		return nil, fmt.Errorf("incorrect name format, expected 'fname sname'")
+	}
+	fname := names[0]
+	sname := names[1]
+
+	// Подготовка SQL-запроса
+	query := `
+		SELECT 
+			tw.task_worker_id,
+			t.task_name,
+			CONCAT(w.worker_fname, ' ', w.worker_sname) AS worker_name,
+			tw.tw_done AS task_count,
+			tw.tw_day_sum AS total_sum,
+			tw.tw_date AS task_date
+		FROM 
+			Workers w
+			JOIN Task_Workers tw ON w.worker_id = tw.worker_id
+			JOIN Tasks t ON t.task_id = tw.task_id
+		WHERE 
+			w.worker_fname = ? AND w.worker_sname = ? AND tw.tw_date BETWEEN ? AND ?
+	`
+
+	// Выполнение запроса
+	rows, err := db.Query(query, fname, sname, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var taskWorkers [][]string
+	for rows.Next() {
+		var taskWorkerID, taskID, twDone int
+		var twDate, tw_day_sum, workerName string
+		err := rows.Scan(&taskWorkerID, &taskID, &workerName, &twDone, &twDate, &tw_day_sum)
+		if err != nil {
+			return nil, err
+		}
+		taskWorker := []string{
+			fmt.Sprintf("%d", taskWorkerID),
+			fmt.Sprintf("%d", taskID),
+			workerName,
+			fmt.Sprintf("%d", twDone),
+			twDate,
+			tw_day_sum,
+		}
+		taskWorkers = append(taskWorkers, taskWorker)
+	}
+	
+	return taskWorkers, nil
+}
+
+func GetSummarySum(db *sql.DB, name string, startDate string, endDate string) string {
+	// Разделяем имя на fname и sname
+	names := strings.SplitN(name, " ", 2)
+	if len(names) != 2 {
+		return ""
+	}
+	fname := names[0]
+	sname := names[1]
+
+	// Подготовка SQL-запроса
+	query := `
+		SELECT 
+			SUM(tw.tw_day_sum)
+		FROM 
+			Workers w
+			JOIN Task_Workers tw ON w.worker_id = tw.worker_id
+			JOIN Tasks t ON t.task_id = tw.task_id
+		WHERE 
+			w.worker_fname = ? AND w.worker_sname = ? AND tw.tw_date BETWEEN ? AND ?
+	`
+
+	// Выполнение запроса
+	var sum string
+	err := db.QueryRow(query, fname, sname, startDate, endDate).Scan(&sum)
+	if err != nil {
+		return ""
+	}
+	return sum
+}
